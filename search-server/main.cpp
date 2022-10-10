@@ -6,6 +6,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <numeric>
 
 using namespace std;
 
@@ -25,10 +26,11 @@ int ReadLineWithNumber() {
 }
 
 vector<string> SplitIntoWords(const string& text) {
+    const char WORD_SEPARATOR = ' ';
     vector<string> words;
     string word;
     for (const char c : text) {
-        if (c == ' ') {
+        if (c == WORD_SEPARATOR) {
             if (!word.empty()) {
                 words.push_back(word);
                 word.clear();
@@ -77,34 +79,20 @@ public:
 
     vector<Document> FindTopDocuments(const string& raw_query,
                                       DocumentStatus status = DocumentStatus::ACTUAL) const {
-        switch (status){
-            case DocumentStatus::IRRELEVANT:
-                return FindTopDocuments(raw_query, []
-                                        (int document_id, DocumentStatus status, int rating) {
-                                            return status == DocumentStatus::IRRELEVANT; });
-            case DocumentStatus::BANNED:
-                return FindTopDocuments(raw_query, []
-                                        (int document_id, DocumentStatus status, int rating) {
-                                            return status == DocumentStatus::BANNED; });
-            case DocumentStatus::REMOVED:
-                return FindTopDocuments(raw_query, []
-                                        (int document_id, DocumentStatus status, int rating) {
-                                            return status == DocumentStatus::REMOVED; });
-            default :
-                return FindTopDocuments(raw_query, []
-                                      (int document_id, DocumentStatus status, int rating) {
-                                          return status == DocumentStatus::ACTUAL; });
-        }
+        return FindTopDocuments(raw_query, [status]
+                                (int document_id, DocumentStatus document_status, int rating) {
+                                    return status == document_status; });
     }
 
     template<typename Predicate>
     vector<Document> FindTopDocuments(const string& raw_query, Predicate function) const {
+        const double INACCURACY = 1e-6;
         const Query query = ParseQuery(raw_query);
         auto matched_documents = FindAllDocuments(query, function);
 
         sort(matched_documents.begin(), matched_documents.end(),
-             [](const Document& lhs, const Document& rhs) {
-                 if (abs(lhs.relevance - rhs.relevance) < 1e-6) {
+             [INACCURACY](const Document& lhs, const Document& rhs) {
+                 if (abs(lhs.relevance - rhs.relevance) < INACCURACY) {
                      return lhs.rating > rhs.rating;
                  } else {
                      return lhs.relevance > rhs.relevance;
@@ -145,6 +133,7 @@ public:
     }
 
 private:
+    const char MINUS_WORD_SYMBOL = '-';
     struct DocumentData {
         DocumentStatus status;
         int rating;
@@ -173,9 +162,7 @@ private:
             return 0;
         }
         int rating_sum = 0;
-        for (const int rating : ratings) {
-            rating_sum += rating;
-        }
+        accumulate(ratings.begin(), ratings.end(), rating_sum);
         return rating_sum / static_cast<int>(ratings.size());
     }
 
@@ -188,7 +175,7 @@ private:
     QueryWord ParseQueryWord(string text) const {
         bool is_minus = false;
         // Word shouldn't be empty
-        if (text[0] == '-') {
+        if (text[0] == MINUS_WORD_SYMBOL) {
             is_minus = true;
             text = text.substr(1);
         }
@@ -229,8 +216,8 @@ private:
             }
             const double inverse_document_freq = ComputeWordInverseDocumentFreq(word);
             for (const auto [document_id, term_freq] : word_to_document_freqs_.at(word)) {
-                if (function(document_id, documents_.at(document_id).status,
-                             documents_.at(document_id).rating)) {
+                const DocumentData document_content = documents_.at(document_id);
+                if (function(document_id, document_content.status, document_content.rating)) {
                     document_to_relevance[document_id] += term_freq * inverse_document_freq;
                 }
             }
