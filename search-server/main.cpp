@@ -44,42 +44,142 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
 */
 void TestAddDocument(){
     vector <Document> res_find;
-    SearchServer ss;
-    res_find = ss.FindTopDocuments("Hello world, my pp is Anna -Alex"s);
-    ASSERT(res_find.empty());
-    ss.SetStopWords("in the is"s);
-    ss.AddDocument(0, "Hello world, my name is Anna"s, DocumentStatus::ACTUAL, {-1, 5, 7, -2});
-    ss.AddDocument(1, "Hello Anna"s, DocumentStatus::ACTUAL, {14, -2});
-    ss.AddDocument(3, "pp"s, DocumentStatus::REMOVED, {1, 1});
-    ss.AddDocument(5, "Hello Alex"s, DocumentStatus::ACTUAL, {1, 1});
-    ss.AddDocument(6, "in the is"s, DocumentStatus::ACTUAL, {1, 1});
-    res_find = ss.FindTopDocuments("Hello world, my pp is Anna -Alex"s);
-    ASSERT_EQUAL(res_find.size(), 2);
-    ASSERT_EQUAL(res_find[0].id, 0);
-    ASSERT_EQUAL(res_find[1].id, 1);
-    ASSERT(res_find[0].relevance > res_find[1].relevance);
-    ASSERT(res_find[0].relevance - (log(5.0 / 3.0) + log(5.0 / 1.0) + log(5.0 / 1.0) + log(5.0 / 1.0) + log(5.0 / 2.0)) 
-           * (1.0 / 5.0) < 1e-6);
-    ASSERT(res_find[1].relevance - (log(5.0 / 3.0) + log(5.0 / 2.0)) * (1.0 / 2.0) < 1e-6);
-    ASSERT_EQUAL(res_find[0].rating, (-1 + 5 + 7 - 2) / 4);
-    ASSERT_EQUAL(res_find[1].rating, (14 - 2) / 2);
-    res_find = ss.FindTopDocuments("Hello world, my pp is Anna -Alex"s,[]
+    {
+        SearchServer ss;
+        res_find = ss.FindTopDocuments("Hello world, my pp is Anna -Alex"s);
+        ASSERT(res_find.empty());
+    }
+    {
+        SearchServer ss;
+        ss.AddDocument(0, "Hello world, my name is Anna"s, DocumentStatus::ACTUAL, {-1, 5, 7, -2});
+        ss.AddDocument(1, "Hello Anna"s, DocumentStatus::ACTUAL, {14, -2});
+        ss.AddDocument(5, "Hello Alex"s, DocumentStatus::ACTUAL, {1, 1});
+        res_find = ss.FindTopDocuments("Hello"s);
+        ASSERT_EQUAL(res_find.size(), 3);
+        ASSERT_EQUAL(res_find[0].id, 0);
+        ASSERT_EQUAL(res_find[1].id, 1);
+        ASSERT_EQUAL(res_find[2].id, 5);
+    }
+    {
+        SearchServer ss;
+        ss.AddDocument(0, "Hello world, my name is Anna"s, DocumentStatus::ACTUAL, {-1, 5, 7, -2});
+        ss.AddDocument(1, "Hello Andrey"s, DocumentStatus::ACTUAL, {14, -2});
+        ss.AddDocument(5, "Hello Alex"s, DocumentStatus::ACTUAL, {1, 1});
+        res_find = ss.FindTopDocuments("Anna"s);
+        ASSERT_EQUAL(res_find.size(), 1);
+        ASSERT_EQUAL(res_find[0].id, 1);
+    }
+}
+
+void TestMinusWord(){
+    vector <Document> res_find;
+    {
+        SearchServer ss;
+        ss.AddDocument(0, "Hello world, my name is Anna"s, DocumentStatus::ACTUAL, {-1, 5, 7, -2});
+        ss.AddDocument(1, "Hello Andrey"s, DocumentStatus::ACTUAL, {14, -2});
+        ss.AddDocument(5, "Hello Alex"s, DocumentStatus::ACTUAL, {1, 1});
+        res_find = ss.FindTopDocuments("Hello -Anna"s);
+        ASSERT_EQUAL(res_find.size(), 2);
+        ASSERT_EQUAL(res_find[0].id, 1);
+        ASSERT_EQUAL(res_find[1].id, 5);
+    }
+    {
+        SearchServer ss;
+        ss.AddDocument(0, "Hello world, my name is Anna"s, DocumentStatus::ACTUAL, {-1, 5, 7, -2});
+        ss.AddDocument(1, "Hello Andrey"s, DocumentStatus::ACTUAL, {14, -2});
+        ss.AddDocument(5, "Hello Alex"s, DocumentStatus::ACTUAL, {1, 1});
+        res_find = ss.FindTopDocuments("Hello -Hello"s);
+        ASSERT(res_find.empty());
+    }
+}
+
+void TestRelevation(){
+    vector <Document> res_find;
+    {
+        ss.SetStopWords("in the is"s);
+        ss.AddDocument(0, "Hello world, my name is Anna"s, DocumentStatus::ACTUAL, {-1, 5, 7, -2});
+        ss.AddDocument(1, "Hello Anna"s, DocumentStatus::ACTUAL, {14, -2});
+        ss.AddDocument(3, "pp"s, DocumentStatus::REMOVED, {1, 1});
+        ss.AddDocument(5, "Hello Alex"s, DocumentStatus::ACTUAL, {1, 1});
+        ss.AddDocument(6, "in the is"s, DocumentStatus::ACTUAL, {1, 1});
+        res_find = ss.FindTopDocuments("Hello world, my pp is Anna -Alex"s);
+        ASSERT(res_find[0].relevance > res_find[1].relevance);
+        ASSERT(res_find[0].relevance - (log(5.0 / 3.0) + log(5.0 / 1.0) + log(5.0 / 1.0) + log(5.0 / 1.0) + log(5.0 / 2.0)) 
+            * (1.0 / 5.0) < 1e-6);
+        ASSERT(res_find[1].relevance - (log(5.0 / 3.0) + log(5.0 / 2.0)) * (1.0 / 2.0) < 1e-6);
+    }
+}
+
+void TestRating(){
+    vector <Document> res_find;
+    {
+        ss.SetStopWords("in the is"s);
+        ss.AddDocument(0, "Hello world, my name is Anna"s, DocumentStatus::ACTUAL, {-1, 5, 7, -2});
+        ss.AddDocument(1, "Hello Anna"s, DocumentStatus::ACTUAL, {14, -2});
+        ss.AddDocument(3, "pp"s, DocumentStatus::REMOVED, {1, 1});
+        ss.AddDocument(5, "Hello Alex"s, DocumentStatus::ACTUAL, {1, 1});
+        ss.AddDocument(6, "in the is"s, DocumentStatus::ACTUAL, {1, 1});
+        res_find = ss.FindTopDocuments("Hello world, my pp is Anna -Alex"s);
+        ASSERT_EQUAL(res_find[0].rating, (-1 + 5 + 7 - 2) / 4);
+        ASSERT_EQUAL(res_find[1].rating, (14 - 2) / 2);
+    }
+}
+
+void TestFindStatus(){
+    vector <Document> res_find;
+    {
+        ss.AddDocument(0, "Hello world, my name is Anna"s, DocumentStatus::ACTUAL, {-1, 5, 7, -2});
+        ss.AddDocument(1, "Hello Anna"s, DocumentStatus::REMOVED, {14, -2});
+        ss.AddDocument(3, "pp"s, DocumentStatus::REMOVED, {1, 1});
+        ss.AddDocument(5, "Hello Alex"s, DocumentStatus::BANNED, {1, 1});
+        res_find = ss.FindTopDocuments("Hello world, my pp is Anna"s, DocumentStatus::ACTUAL);
+        ASSERT_EQUAL(res_find.size(), 1);
+        ASSERT_EQUAL(res_find[0].id, 0);
+    }
+    {
+        ss.AddDocument(0, "Hello world, my name is Anna"s, DocumentStatus::ACTUAL, {-1, 5, 7, -2});
+        ss.AddDocument(1, "Hello Anna"s, DocumentStatus::REMOVED, {14, -2});
+        ss.AddDocument(3, "pp"s, DocumentStatus::REMOVED, {1, 1});
+        ss.AddDocument(5, "Hello Alex"s, DocumentStatus::BANNED, {1, 1});
+        res_find = ss.FindTopDocuments("Hello world, my pp is Anna"s, DocumentStatus::REMOVED);
+        ASSERT_EQUAL(res_find.size(), 2);
+        ASSERT_EQUAL(res_find[0].id, 1);
+        ASSERT_EQUAL(res_find[1].id, 3);
+    }
+    {
+        ss.AddDocument(0, "Hello world, my name is Anna"s, DocumentStatus::ACTUAL, {-1, 5, 7, -2});
+        ss.AddDocument(1, "Hello Anna"s, DocumentStatus::REMOVED, {14, -2});
+        ss.AddDocument(3, "pp"s, DocumentStatus::REMOVED, {1, 1});
+        ss.AddDocument(5, "Hello Alex"s, DocumentStatus::BANNED, {1, 1});
+        res_find = ss.FindTopDocuments("Hello world, my pp is Anna"s, DocumentStatus::BANNED);
+        ASSERT_EQUAL(res_find.size(), 1);
+        ASSERT_EQUAL(res_find[0].id, 5);
+    }
+}
+
+void TestFunctionPredicate(){
+    vector <Document> res_find;
+    {
+        ss.AddDocument(0, "Hello world, my name is Anna"s, DocumentStatus::ACTUAL, {-1, 5, 7, -2});
+        ss.AddDocument(1, "Hello Anna"s, DocumentStatus::REMOVED, {14, -2});
+        ss.AddDocument(3, "pp"s, DocumentStatus::REMOVED, {1, 1});
+        ss.AddDocument(5, "Hello Alex"s, DocumentStatus::BANNED, {1, 1});
+        res_find = ss.FindTopDocuments("Hello world, my pp is Anna -Alex"s,[]
                                 (int document_id, DocumentStatus document_status, int rating) {
                                     ignore_unused(document_id);
                                     ignore_unused(document_status);
                                     return rating > 3; });
-    ASSERT_EQUAL(res_find.size(), 1);
-    ASSERT_EQUAL(res_find[0].id, 1);
-    ASSERT(res_find[0].relevance - (log(5.0 / 3.0) + log(5.0 / 2.0)) * (1.0 / 2.0) < 1e-6);
-    ASSERT_EQUAL(res_find[0].rating, (14 - 2) / 2);
-    res_find = ss.FindTopDocuments("Hello world, my pp is Anna -Alex"s, DocumentStatus::REMOVED);
-    ASSERT_EQUAL(res_find.size(), 1);
-    ASSERT(res_find[0].relevance - log(5.0 / 1.0) * (1.0 / 1.0) < 1e-6);
-    ASSERT_EQUAL(res_find[0].id, 3);
-    ASSERT_EQUAL(res_find[0].rating, (1 + 1) / 2);
+        ASSERT_EQUAL(res_find.size(), 1);
+        ASSERT_EQUAL(res_find[0].id, 1);
+    }
 }
 
 void TestSearchServer(){
     RUN_TEST(TestExcludeStopWordsFromAddedDocumentContent);
     RUN_TEST(TestAddDocument);
+    RUN_TEST(TestFindStatus);
+    RUN_TEST(TestFunctionPredicate);
+    RUN_TEST(TestMinusWord);
+    RUN_TEST(TestRating);
+    RUN_TEST(TestRelevation);
 }
