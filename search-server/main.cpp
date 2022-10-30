@@ -31,10 +31,6 @@ vector<string> SplitIntoWords(const string& text) {
     for (const char c : text + " "s) {
         if (c == ' ') {
             if (!word.empty()) {
-                if(((word[0] == '-') && ((word.size() == 1) || (word[1] == '-')))
-                || (word[word.size() - 1] == '-')){
-                    throw invalid_argument("Incorrect word"s);
-                }
                 words.push_back(word);
                 word.clear();
             }
@@ -95,13 +91,13 @@ public:
 
     void AddDocument(int document_id, const string& document, DocumentStatus status,
                                    const vector<int>& ratings) {
-        id_.push_back(document_id);
         if(document_id < 0){
             throw invalid_argument("Negative id"s);
         }
         if (documents_.count(document_id)){
             throw invalid_argument("A document with this id already exists"s);
         }
+        id_.push_back(document_id);
         const vector<string> words = SplitIntoWordsNoStop(document);
         const double inv_word_count = 1.0 / words.size();
         for (const string& word : words) {
@@ -112,12 +108,13 @@ public:
 
    template <typename DocumentPredicate>
     vector<Document> FindTopDocuments(const string& raw_query, DocumentPredicate document_predicate) const {
-    Query query = ParseQuery(raw_query);
+        const double INACCURACY = 1e-6;
+        Query query = ParseQuery(raw_query);
         vector<Document> matched_documents = FindAllDocuments(query, document_predicate);
 
         sort(matched_documents.begin(), matched_documents.end(),
-             [](const Document& lhs, const Document& rhs) {
-                 if (abs(lhs.relevance - rhs.relevance) < 1e-6) {
+             [INACCURACY](const Document& lhs, const Document& rhs) {
+                 if (abs(lhs.relevance - rhs.relevance) < INACCURACY) {
                      return lhs.rating > rhs.rating;
                  } else {
                      return lhs.relevance > rhs.relevance;
@@ -235,6 +232,10 @@ private:
     Query ParseQuery(const string& text) const {
         Query query;
         for (const string& word : SplitIntoWords(text)) {
+            if(((word[0] == '-') && ((word.size() == 1) || (word[1] == '-')))
+                || (word[word.back()] == '-')){
+                    throw invalid_argument("Incorrect word"s);
+            }
             const QueryWord query_word = ParseQueryWord(word);
             if (!query_word.is_stop) {
                 if (query_word.is_minus) {
