@@ -35,9 +35,6 @@ vector<string> SplitIntoWords(const string& text) {
                 word.clear();
             }
         } else {
-            if((c >= 0) && (c < 32)){
-               throw invalid_argument("Incorrect character"s);
-            }
             word += c;
         }
     }
@@ -62,8 +59,9 @@ template <typename StringContainer>
 set<string> MakeUniqueNonEmptyStrings(const StringContainer& strings) {
     set<string> non_empty_strings;
     for (const string& str : strings) {
-        const vector<string> words = SplitIntoWords(str);
-        non_empty_strings.insert(words.begin(), words.end());
+        if (!str.empty()) {
+            non_empty_strings.insert(str);
+        }
     }
     return non_empty_strings;
 }
@@ -81,6 +79,7 @@ public:
     template <typename StringContainer>
     explicit SearchServer(const StringContainer& stop_words)
         : stop_words_(MakeUniqueNonEmptyStrings(stop_words)) {
+            WordVerification(stop_words_);
     }
 
     explicit SearchServer(const string& stop_words_text)
@@ -99,6 +98,7 @@ public:
         }
         id_.push_back(document_id);
         const vector<string> words = SplitIntoWordsNoStop(document);
+        WordVerification(words);
         const double inv_word_count = 1.0 / words.size();
         for (const string& word : words) {
             word_to_document_freqs_[word][document_id] += inv_word_count;
@@ -111,7 +111,6 @@ public:
         const double INACCURACY = 1e-6;
         Query query = ParseQuery(raw_query);
         vector<Document> matched_documents = FindAllDocuments(query, document_predicate);
-
         sort(matched_documents.begin(), matched_documents.end(),
              [INACCURACY](const Document& lhs, const Document& rhs) {
                  if (abs(lhs.relevance - rhs.relevance) < INACCURACY) {
@@ -187,6 +186,17 @@ private:
         return stop_words_.count(word) > 0;
     }
 
+    template<typename Container>
+    static void WordVerification(const Container& words){
+        for(const string& word : words){
+            for(char c : word){
+                if((c >= 0) && (c < 32)){
+                    throw invalid_argument("Incorrect character"s);
+                }
+            }
+        }
+    }
+
     vector<string> SplitIntoWordsNoStop(const string& text) const {
         vector<string> words;
         for (const string& word : SplitIntoWords(text)) {
@@ -218,6 +228,9 @@ private:
         bool is_minus = false;
         // Word shouldn't be empty
         if (text[0] == '-') {
+            if ((text.size() == 1) || (text[1] == '-') || (text[text.back()] == '-')){
+                    throw invalid_argument("Incorrect word"s);
+            }
             is_minus = true;
             text = text.substr(1);
         }
@@ -231,11 +244,9 @@ private:
 
     Query ParseQuery(const string& text) const {
         Query query;
-        for (const string& word : SplitIntoWords(text)) {
-            if(((word[0] == '-') && ((word.size() == 1) || (word[1] == '-')))
-                || (word[word.back()] == '-')){
-                    throw invalid_argument("Incorrect word"s);
-            }
+        const vector<string> words = SplitIntoWords(text);
+        WordVerification(words);
+        for (const string& word : words) {
             const QueryWord query_word = ParseQueryWord(word);
             if (!query_word.is_stop) {
                 if (query_word.is_minus) {
