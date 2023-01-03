@@ -10,6 +10,9 @@ using std::set;
 vector<string> SplitIntoWords(const string& text);
 
 template <typename StringContainer>
+set<string> MakeUniqueNonEmptyStrings(const StringContainer& strings);
+
+template <typename StringContainer>
 set<string> MakeUniqueNonEmptyStrings(const StringContainer& strings) {
     set<string> non_empty_strings;
     for (const string& str : strings) {

@@ -20,6 +20,12 @@ void SearchServer::AddDocument(int document_id, const string& document, Document
     document_ids_.push_back(document_id);
 }
 
+bool SearchServer::IsValidWord(const string& word) {
+    return none_of(word.begin(), word.end(), [](char c) {
+        return c >= '\0' && c < ' ';
+    });
+}
+
 vector<Document> SearchServer::FindTopDocuments(const string& raw_query, DocumentStatus status) const {
     return FindTopDocuments(
         raw_query, [status](int document_id, DocumentStatus document_status, int rating) {
@@ -111,6 +117,17 @@ SearchServer::Query SearchServer::ParseQuery(const string& text) const {
         }
     }
     return result;
+}
+
+int SearchServer::ComputeAverageRating(const vector<int>& ratings) {
+    if (ratings.empty()) {
+        return 0;
+    }
+    int rating_sum = 0;
+    for (const int rating : ratings) {
+        rating_sum += rating;
+    }
+    return rating_sum / static_cast<int>(ratings.size());
 }
 
 double SearchServer::ComputeWordInverseDocumentFreq(const string& word) const {
