@@ -8,13 +8,15 @@
 #include "document.h"
 #include <string>
 #include "string_processing.h"
+#include "log_duration.h"
+#include <iostream>
+#include <iterator>
 
 using std::string;
 using std::vector;
 using std::map;
 using std::set;
 using std::invalid_argument;
-using std::tuple;
 using namespace std::literals::string_literals;
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
@@ -39,11 +41,17 @@ public:
 
     int GetDocumentCount() const;
 
-    int GetDocumentId(int index) const;
+    vector<int>::iterator begin();
 
-    tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query,
+    vector<int>::iterator end();
+
+    std::pair<vector<string>, DocumentStatus> MatchDocument(const string& raw_query,
                                                         int document_id) const;
     
+    const map<string, double>& GetWordFrequencies(int document_id) const;
+
+    void RemoveDocument(int document_id);
+
 private:
     struct DocumentData {
         int rating;
@@ -51,6 +59,7 @@ private:
     };
     const set<string> stop_words_;
     map<string, map<int, double>> word_to_document_freqs_;
+    map<int, map<string, double>> document_to_word_freqs_;
     map<int, DocumentData> documents_;
     vector<int> document_ids_;
 
@@ -116,7 +125,7 @@ vector<Document> SearchServer::FindTopDocuments(const string& raw_query,
 }
 
 template <typename DocumentPredicate>
-    vector<Document> SearchServer::FindAllDocuments(const Query& query,
+vector<Document> SearchServer::FindAllDocuments(const Query& query,
                                       DocumentPredicate document_predicate) const {
     map<int, double> document_to_relevance;
     for (const string& word : query.plus_words) {
