@@ -1,29 +1,28 @@
 #pragma once
-#include "search_server.h"
-#include "document.h"
+
 #include <vector>
 #include <deque>
 #include <string>
 
-using std::string;
-using std::vector;
+#include "search_server.h"
+#include "document.h"
 
 class RequestQueue {
 public:
     explicit RequestQueue(const SearchServer& search_server);
     
     template <typename DocumentPredicate>
-    vector<Document> AddFindRequest(const string& raw_query, DocumentPredicate document_predicate);
+    std::vector<Document> AddFindRequest(const std::string& raw_query, DocumentPredicate document_predicate);
     
-    vector<Document> AddFindRequest(const string& raw_query, DocumentStatus status);
+    std::vector<Document> AddFindRequest(const std::string& raw_query, DocumentStatus status);
     
-    vector<Document> AddFindRequest(const string& raw_query);
+    std::vector<Document> AddFindRequest(const std::string& raw_query);
     
     int GetNoResultRequests() const;
     
 private:
     struct QueryResult {
-        vector<Document> docs;
+        std::vector<Document> docs;
     };
     
     std::deque<QueryResult> requests_;
@@ -31,12 +30,12 @@ private:
     int empty_query_res = 0;
     const SearchServer& server;
     
-    void AddFind(const vector<Document>& docs);
+    void AddFind(const std::vector<Document>& docs);
 }; 
 
 template <typename DocumentPredicate>
-vector<Document> RequestQueue::AddFindRequest(const string& raw_query, DocumentPredicate document_predicate) {
-    vector<Document> res = server.FindTopDocuments(raw_query, document_predicate);
+std::vector<Document> RequestQueue::AddFindRequest(const std::string& raw_query, DocumentPredicate document_predicate) {
+    std::vector<Document> res = server.FindTopDocuments(raw_query, document_predicate);
     AddFind(res);
     return res;
 }

@@ -1,5 +1,12 @@
 #include "search_server.h"
 
+using std::string;
+using std::vector;
+using std::map;
+using std::set;
+using std::invalid_argument;
+using namespace std::literals::string_literals;
+
 SearchServer::SearchServer(const string& stop_words_text)
 : SearchServer(SplitIntoWords(stop_words_text))
     {
@@ -18,7 +25,7 @@ void SearchServer::AddDocument(int document_id, const string& document, Document
         document_to_word_freqs_[document_id][word]+= inv_word_count;
     }
     documents_.emplace(document_id, DocumentData{ComputeAverageRating(ratings), status});
-    document_ids_.push_back(document_id);
+    document_ids_.insert(document_id);
 }
 
 bool SearchServer::IsValidWord(const string& word) {
@@ -43,26 +50,28 @@ int SearchServer::GetDocumentCount() const {
 }
 
 const map<string, double>& SearchServer::GetWordFrequencies(int document_id) const{
-    return document_to_word_freqs_.at(document_id);
+     static const std::map<std::string, double> EMPTY_MAP;
+    return document_to_word_freqs_.count(document_id) ? document_to_word_freqs_.at(document_id) : EMPTY_MAP;
 }
 
-vector<int>::iterator SearchServer::begin(){
+set<int>::iterator SearchServer::begin(){
     return document_ids_.begin();
 }
 
-vector<int>::iterator SearchServer::end(){
+set<int>::iterator SearchServer::end(){
     return document_ids_.end();
 }
 
 void SearchServer::RemoveDocument(int document_id){
-    for(auto& data_word : word_to_document_freqs_){
-        if(data_word.second.count(document_id)){
-            data_word.second.erase(document_id);
-        }
+    if(!documents_.count(document_id)){
+        return ;
+    }
+    for(auto& data_word : document_to_word_freqs_[document_id]){
+        word_to_document_freqs_[data_word.first].erase(document_id);
     }
     document_to_word_freqs_.erase(document_id);
     documents_.erase(document_id);
-    document_ids_.erase(find(document_ids_.begin(), document_ids_.end(), document_id));
+    document_ids_.erase(document_ids_.find(document_id));
 }
 
 std::pair<vector<string>, DocumentStatus> SearchServer::MatchDocument(const string& raw_query,

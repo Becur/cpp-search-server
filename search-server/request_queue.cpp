@@ -1,4 +1,7 @@
- #include "request_queue.h"
+#include "request_queue.h"
+
+using std::string;
+using std::vector;
 
 RequestQueue::RequestQueue(const SearchServer& search_server)
  : server(search_server){}

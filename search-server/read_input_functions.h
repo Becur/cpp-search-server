@@ -1,8 +1,7 @@
 #pragma once
+
 #include <string>
 
-using std::string;
-
-string ReadLine();
+std::string ReadLine();
 
 int ReadLineWithNumber();

@@ -1,7 +1,8 @@
-#include "search_server.h"
-#include "document.h"
 #include <string>
 #include <iostream>
+
+#include "search_server.h"
+#include "document.h"
 #include "remove_duplicates.h"
 #include "test_example_functions.h"
 
@@ -35,7 +36,7 @@ int main() {
     // слова из разных документов, не является дубликатом
     AddDocument(search_server, 9, "nasty rat with curly hair"s, DocumentStatus::ACTUAL, {1, 2});
     
-    cout << "Before duplicates removed: "s << search_server.GetDocumentCount() << std::endl;
+    std::cout << "Before duplicates removed: "s << search_server.GetDocumentCount() << std::endl;
     RemoveDuplicates(search_server);
-    cout << "After duplicates removed: "s << search_server.GetDocumentCount() << std::endl;
+    std::cout << "After duplicates removed: "s << search_server.GetDocumentCount() << std::endl;
 } 

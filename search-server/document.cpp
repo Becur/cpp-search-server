@@ -1,6 +1,9 @@
-#include "document.h"
 #include <string>
 
+#include "document.h"
+
+
+using std::ostream;
 using namespace std::literals::string_literals;
 
 ostream& operator<<(ostream& out, Document doc){

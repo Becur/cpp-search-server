@@ -1,8 +1,7 @@
 #pragma once
+
 #include <ostream>
 #include <vector>
-
-using std::ostream;
 
 template<typename It>
 struct IteratorRange{
@@ -14,7 +13,7 @@ template <typename Container>
 auto Paginate(const Container& c, long unsigned int page_size);
 
 template<typename It>
-ostream& operator<<(ostream& out, IteratorRange<It> itran);
+std::ostream& operator<<(std::ostream& out, IteratorRange<It> itran);
 
 template<typename It> 
 class Paginator{
@@ -24,6 +23,7 @@ class Paginator{
     auto begin() const;
     
     auto end() const;
+    
     private:
     std::vector<IteratorRange<It>> pages;
 };
@@ -69,7 +69,7 @@ auto Paginator<It>::end() const{
 
 
 template<typename It>
-ostream& operator<<(ostream& out, IteratorRange<It> itran){
+std::ostream& operator<<(std::ostream& out, IteratorRange<It> itran){
     for(It i = itran.begin; i != itran.end; ++i){
         out << *i;
     }
