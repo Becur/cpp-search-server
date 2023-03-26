@@ -43,12 +43,9 @@ public:
     
     template <typename DocumentPredicate>
     std::vector<Document> FindTopDocuments(const std::string_view raw_query, DocumentPredicate document_predicate) const;
-    template <typename DocumentPredicate>
-    std::vector<Document> FindTopDocuments(const std::execution::sequenced_policy& policy, const std::string_view raw_query, 
-                                            DocumentPredicate document_predicate) const;
-    template <typename DocumentPredicate>
-    std::vector<Document> FindTopDocuments(const std::execution::parallel_policy& policy, const std::string_view raw_query, 
-                                            DocumentPredicate document_predicate) const;
+    template <typename ExecutionPolicy, typename DocumentPredicate>
+    std::vector<Document> FindTopDocuments(const ExecutionPolicy& policy, const std::string_view raw_query,
+                                      DocumentPredicate document_predicate) const;
     
 
     int GetDocumentCount() const;
@@ -114,7 +111,8 @@ private:
     double ComputeWordInverseDocumentFreq(const std::string_view word) const;
 
     template <typename DocumentPredicate>
-    std::vector<Document> FindAllDocuments(const Query& query,
+    std::vector<Document> FindAllDocuments(const std::execution::sequenced_policy& policy, 
+                                            const Query& query,
                                             DocumentPredicate document_predicate) const;
     template <typename DocumentPredicate>
     std::vector<Document> FindAllDocuments(const std::execution::parallel_policy& policy,
@@ -133,11 +131,11 @@ SearchServer::SearchServer(const StringContainer& stop_words)
     }
 }
 
-template <typename DocumentPredicate>
-std::vector<Document> SearchServer::FindTopDocuments(const std::string_view raw_query,
+template <typename ExecutionPolicy, typename DocumentPredicate>
+std::vector<Document> SearchServer::FindTopDocuments(const ExecutionPolicy& policy, const std::string_view raw_query,
                                       DocumentPredicate document_predicate) const {
     const auto query = ParseQuery(raw_query);
-    auto matched_documents = FindAllDocuments(query, document_predicate);
+    auto matched_documents = FindAllDocuments(policy, query, document_predicate);
     std::sort(matched_documents.begin(), matched_documents.end(),
         [](const Document& lhs, const Document& rhs) {
             const float ERROR_RATE = 1e-6;
@@ -155,37 +153,15 @@ std::vector<Document> SearchServer::FindTopDocuments(const std::string_view raw_
 }
 
 template <typename DocumentPredicate>
-std::vector<Document> SearchServer::FindTopDocuments(const std::execution::sequenced_policy& policy, 
-                                                    const std::string_view raw_query,
+std::vector<Document> SearchServer::FindTopDocuments( const std::string_view raw_query,
                                                     DocumentPredicate document_predicate) const {
-                                                        return FindTopDocuments(raw_query, document_predicate);
-                                      }
-
-template <typename DocumentPredicate>
-std::vector<Document> SearchServer::FindTopDocuments(const std::execution::parallel_policy& policy,
-                                                    const std::string_view raw_query,
-                                                    DocumentPredicate document_predicate) const {
-    const auto query = ParseQuery(raw_query);
-    auto matched_documents = FindAllDocuments(std::execution::par, query, document_predicate);
-    std::sort(matched_documents.begin(), matched_documents.end(),
-        [](const Document& lhs, const Document& rhs) {
-            const float ERROR_RATE = 1e-6;
-            if (std::abs(lhs.relevance - rhs.relevance) < ERROR_RATE) {
-                return lhs.rating > rhs.rating;
-            } else {
-                return lhs.relevance > rhs.relevance;
-            }
-        });
-    if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
-        matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
-    }
-
-    return matched_documents;
+    return FindTopDocuments(std::execution::seq, raw_query, document_predicate);
 }
 
 template <typename DocumentPredicate>
-std::vector<Document> SearchServer::FindAllDocuments(const Query& query,
-                                      DocumentPredicate document_predicate) const {
+std::vector<Document> SearchServer::FindAllDocuments(const std::execution::sequenced_policy& policy,
+                                                    const Query& query,
+                                                     DocumentPredicate document_predicate) const {
     std::map<int, double> document_to_relevance;
     for (const std::string_view word : query.plus_words) {
         if (word_to_document_freqs_.count(word) == 0) {
