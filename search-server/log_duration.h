@@ -4,6 +4,7 @@
 #include <ostream>
 #include <string>
 #include <iostream>
+#include <string_view>
 
 #define PROFILE_CONCAT_INTERNAL(X, Y) X ## Y
 #define PROFILE_CONCAT(X, Y) PROFILE_CONCAT_INTERNAL(X, Y)

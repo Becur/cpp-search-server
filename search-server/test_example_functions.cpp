@@ -11,7 +11,7 @@ void MatchDocuments(SearchServer& search_server, const std::string& raw_query){
         auto res = search_server.MatchDocument(raw_query, id);
         cout << "{ document_id = "s << id << ", status = "s << static_cast<int>(res.second);
         cout << ", words ="s;
-        for(const std::string& word : res.first){
+        for(const std::string_view word : res.first){
             cout << " "s << word;
         }
         cout << "}\n"s;
